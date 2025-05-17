@@ -39,18 +39,25 @@ vector<vector<int>> dist(N, vector<int>(N, -1));
 vector<vector<int>> nextCity(N, vector<int>(N, -1));
 
 void floydWarshall(){
+    // Initialize nextCity
     for (int i = 0; i < N; ++i)
-       for (int j = 0; j < N; ++j)
-          if (graph[i][j] != INF)
-              nextCity[i][j] = j;
+        for (int j = 0; j < N; ++j) {
+            dist[i][j] = graph[i][j];  // initialize dist here instead of main
+            if (graph[i][j] != INF && i != j)
+                nextCity[i][j] = j;
+            else
+                nextCity[i][j] = -1;
+        }
 
     for (int k = 0 ; k < N ; k++){
         for (int i = 0; i < N; i++)
             for (int j = 0; j < N; j++){
-                dist[i][j] = min (graph[i][j], graph[i][k] + graph[k][j]);
-                nextCity[i][j] = nextCity[i][k];
+                if (dist[i][k] != INF && dist[k][j] != INF && dist[i][j] > dist[i][k] + dist[k][j]){
+                    dist[i][j] = dist[i][k] + dist[k][j];
+                    nextCity[i][j] = nextCity[i][k];
+                }
             }
-        }
+    }
 }
 
 unordered_map<string, int> cityIndex;
@@ -72,7 +79,10 @@ pair<int, int> convertKmToTime(int distanceKm) {
 }
 
 vector<string> getPath(int u, int v) {
-    if (nextCity[u][v] == -1) return {}; // مفيش طريق
+    if (nextCity[u][v] == -1) {
+        cout << "No routes are available";
+        return {}; // مفيش طريق
+    }
     vector<string> path = { cities[u] };
     while (u != v) {
         u = nextCity[u][v];
@@ -81,10 +91,20 @@ vector<string> getPath(int u, int v) {
     return path;
 }
 
+string toUpperString(const string& input) {
+    string result = input;
+    result[0] = toupper(result[0]);
+    return result;
+}
+
 void simulatTravel (string start, string end){
     int f = cityIndex[start];
     int t = cityIndex[end];
-    const vector<string>& path = getPath(f, t);
+    vector<string> path = getPath(f, t);
+    if (path.empty()) {
+        cout << "No available route for the selected cities.\n";
+        return;
+    }    
     for (size_t i = 0; i < path.size() - 1; i++){
         string from = path[i];
         string to = path[i+1];
@@ -95,16 +115,16 @@ void simulatTravel (string start, string end){
         auto [hrs, mins] = convertKmToTime (destination);
         int totalTime = (hrs * 60 + mins);
 
-        cout << "Heading from " << from << " to " << to << " (Estimated time: "
-        << hrs << "h " << mins << "m)\n";
+        cout << "Heading from " << toUpperString(from) << " to " << toUpperString(to) << " (Estimated time: "
+        << hrs << "h " << mins << "m)" << endl;
         
         for (int minute = 1; minute <= totalTime; minute++){
             this_thread::sleep_for(milliseconds(static_cast<int>(TIME_SCALE * 1000)));
             cout << "  >> Minute " << minute << "/" << totalTime << "...\r" << flush;
         }
-        cout << "\nArrived at " << to << "\n\n_";
+        cout << "\nArrived at " << toUpperString(to) << "\n\n";
     }
-    cout << "You Arrived to your destination.\n";
+    cout << "You Arrived to your destination.\n\n";
 }
 
 vector<pair<string, int>> getNearestCities(int sourceIndex, int num) {
@@ -171,10 +191,10 @@ void findNearestFacility(const string& fromCity, const string& facilityType) {
     }
 
     if (nearestCity.empty()) {
-        cout << "No nearby city contains a " << facilityType << ".\n";
+        cout << "No nearby city contains a " << toUpperString(facilityType) << ".\n";
     } else {
         auto [hrs, mins] = convertKmToTime(minDistance);
-        cout << "Nearest " << facilityType << " is in " << nearestCity << ".\n";
+        cout << "Nearest " << toUpperString(facilityType) << " is in " << toUpperString(nearestCity) << ".\n";
         cout << "Distance: " << minDistance << " km\n";
         cout << "Estimated travel time: " << hrs << " hour(s) and " << mins << " minute(s)\n";
     }
@@ -194,19 +214,19 @@ void queryShortestPath(const string& from, const string& to) {
     int t = cityIndex[to];
     int shortestKMs = dist[f][t];
     if (dist[f][t] == INF) {
-        cout << "No path exists between " << cities[f] << " and " << cities[t] << "." << endl;
+        cout << "No path exists between " << toUpperString(cities[f]) << " and " << toUpperString(cities[t]) << "." << endl;
         return;
     }  
 
-    cout << "Shortest distance from " << cities[f] << " to " << cities[t] << " is: " << dist[f][t] << " km" << endl;
+    cout << "Shortest distance from " << toUpperString(cities[f]) << " to " << toUpperString(cities[t]) << " is: " << dist[f][t] << " km" << endl;
     auto [hrs, mins] = convertKmToTime(dist[f][t]);
     cout << "Estimated travel time: " << hrs << " hour(s) and " << mins << " minute(s)" << endl;
 
     // عرض الطريق
-    const vector<string>& path = getPath(f, t);
+    vector<string> path = getPath(f, t);
     cout << "Route: ";
     for (int i = 0; i < path.size(); ++i) {
-        cout << path[i];
+        cout << toUpperString(path[i]) ;
         if (i != path.size() - 1) cout << " -> ";
     }
     cout << endl;
@@ -238,7 +258,7 @@ void updateEdge(string place1, string place2, int newCost) {
     graph[p2][p1] = newCost; // لو الطريق في الاتجاهين
     floydWarshall();
 
-    cout << "Updated route between " << place1 << " and " << place2 << " to cost " << newCost << " km.\n";
+    cout << "Updated route between " << toUpperString(place1)  << " and " << toUpperString(place2) << " to cost " << newCost << " km.\n";
 }
 
 string toLowerString(const string& input) {
@@ -247,20 +267,19 @@ string toLowerString(const string& input) {
     return result;
 }
 
-enum choiseMenue {
+enum choiceMap {
     Traveling = 1,
     Shortest_path,
-    Find_nearest_facility,
+    Find_the_nearest_facility,
     Update_route,
     Nearest_cities,
-    Exit
+    Exit_program
 };
 
 int main(){
-    initializeCityIndex();
-    dist = graph;       
+    initializeCityIndex();      
     floydWarshall();
-    int choise, n;
+    int choice, n;
     cout << "WELCOME !" << endl;
     string from, to;
     do{
@@ -271,31 +290,33 @@ int main(){
                 "5- Nearest cities\n"
                 "6- Exit\n"
                 "Choise selected: ";
-        cin >> choise;
-        if (choise == Traveling){
+        if (!(cin >> choice)) {
+            cout << "Invalid input. Please enter a number.\n";               
+            cin.clear();
+            cin.ignore(numeric_limits<streamsize>::max(), '\n');
+            continue;
+        }
+        cin.ignore();
+                
+        if (choice == Traveling){
             cout << "Enter the city you're traveling from: ";
-            cin.ignore();
-            getline(cin, from);
+            getline (cin , from);
             cout << "Enter the city you're traveling to: ";
-            cin.ignore();
-            getline(cin, to);
+            getline (cin , to);
             from = toLowerString (from);
             to = toLowerString (to);
             simulatTravel(from, to);
-        }else if (choise == Shortest_path){
+        }else if (choice == Shortest_path){
             cout << "Name of the first city: ";
-            cin.ignore();
-            getline(cin, from);
+            getline (cin , from);
             cout << "Name of the second city: ";
-            cin.ignore();
-            getline(cin, to);
+            getline (cin , to);
             from = toLowerString (from);
             to = toLowerString (to);
             queryShortestPath (from, to);
-        }else if (choise == Find_nearest_facility){
+        }else if (choice == Find_the_nearest_facility){
             cout << "Enter the city you are in: ";
-            cin.ignore();
-            getline(cin, from);
+            getline (cin , from);
             cout << "Choos facility\n"
                     "Fuel Station\n"
                     "Police Station\n"
@@ -303,49 +324,51 @@ int main(){
                     "Hotel\n"
                     "Airport\n"
                     ": ";
-            cin.ignore();
-            getline(cin, to);
+            getline (cin , to);
             from = toLowerString (from);
             to = toLowerString (to);
             findNearestFacility (from, to);
-        }else if (choise == Update_route){
+        }else if (choice == Update_route){
             int newCost;
             cout << "How many routes you want to update? ";
             cin >> n;
+            cin.ignore();
             for (int i = 0; i < n; i++){
                 cout << "Enter place 1: ";
-                cin.ignore();
-                getline(cin, from);
+                getline (cin , from);
                 cout << "Enter place 2: ";
-                cin.ignore();
-                getline(cin, to);
+                getline (cin , to);
                 cout << "Enter new cost: ";
                 cin >> newCost;
+                cin.ignore();
                 from = toLowerString (from);
                 to = toLowerString (to);
                 updateEdge (from, to, newCost);
             }
-        }else if (choise == Nearest_cities){
+        }else if (choice == Nearest_cities){
             cout << "Enter city name: ";
-            cin.ignore();
-            getline(cin, from);
+            getline (cin , from);
             cout << "How many nearest cities do you want? ";
             cin >> n;
+            cin.ignore();
             from = toLowerString (from);
             if (cityIndex.count(from)) {
                int sourceIdx = cityIndex[from];
                auto result = getNearestCities(sourceIdx, n);
                for (auto& [name, d] : result) {
-                   cout << name << " at distance: " << d << " km" << endl;
+                   cout << toUpperString(name) << " at distance: " << d << " km" << endl;
                     auto [hrs, mins] = convertKmToTime(d);
                     cout << "Estimated travel time: " << hrs << " hour(s) and " << mins << " minute(s)" << endl;
                 }
             } else {
                 cout << "City not found." << endl;
             }
+        } else if (choice == Exit_program){
+            break;
         } else {
             cout << "Wrong Input. Try again!\n";
         }
         
-    }while (choise != Exit);
+    }while (choice != Exit_program);
 }
+
